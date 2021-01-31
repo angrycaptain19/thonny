@@ -175,9 +175,8 @@ class ShellView(tk.PanedWindow):
     def hide_plotter(self):
         if self.plotter is None or not self.plotter.winfo_ismapped():
             return
-        else:
-            self.remove(self.plotter)
-            running.io_animation_required = False
+        self.remove(self.plotter)
+        running.io_animation_required = False
 
     def set_notice(self, text):
         if text is None:
@@ -432,7 +431,7 @@ class BaseShellText(EnhancedTextWithLogging, SyntaxText):
             self._ensure_visible()
 
         welcome_text = msg.get("welcome_text")
-        if welcome_text and welcome_text:
+        if welcome_text:
             preceding = self.get("output_insert -1 c", "output_insert")
             if preceding.strip() and not preceding.endswith("\n"):
                 self._insert_text_directly("\n")
@@ -562,9 +561,10 @@ class BaseShellText(EnhancedTextWithLogging, SyntaxText):
             if stream_name == "stdout" and self.tty_mode:
                 tags |= self._get_ansi_tags()
 
-            non_url_length = len(data)
-            for url_match in SIMPLE_URL_SPLIT_REGEX.finditer(data):
-                non_url_length -= url_match.end() - url_match.start()
+            non_url_length = len(data) - sum(
+                url_match.end() - url_match.start()
+                for url_match in SIMPLE_URL_SPLIT_REGEX.finditer(data)
+            )
 
             if (
                 non_url_length > self._get_squeeze_threshold()
@@ -721,9 +721,8 @@ class BaseShellText(EnhancedTextWithLogging, SyntaxText):
             self._io_cursor_offset = -len(line)
         else:
             self._io_cursor_offset += delta
-            if self._io_cursor_offset < -len(line):
                 # cap
-                self._io_cursor_offset = -len(line)
+            self._io_cursor_offset = max(self._io_cursor_offset, -len(line))
 
     def _reset_ansi_attributes(self):
         self._ansi_foreground = None
@@ -1183,9 +1182,9 @@ class BaseShellText(EnhancedTextWithLogging, SyntaxText):
         while len(lines) > 0 and (lines[0].strip().startswith("#") or lines[0].strip() == ""):
             lines.pop(0)
 
-        compound_keywords = ["if", "while", "for", "with", "try", "def", "class", "async", "await"]
         if len(lines) > 0:
             first_word = lines[0].strip().split()[0]
+            compound_keywords = ["if", "while", "for", "with", "try", "def", "class", "async", "await"]
             if first_word in compound_keywords and not source.replace(" ", "").replace(
                 "\t", ""
             ).endswith("\n\n"):
@@ -1213,10 +1212,7 @@ class BaseShellText(EnhancedTextWithLogging, SyntaxText):
             try:
                 if cmd_line.startswith("%"):
                     parts = cmd_line.split(" ", maxsplit=1)
-                    if len(parts) == 2:
-                        args_str = parts[1].strip()
-                    else:
-                        args_str = ""
+                    args_str = parts[1].strip() if len(parts) == 2 else ""
                     argv = parse_cmd_line(cmd_line[1:])
                     command_name = argv[0]
                     cmd_args = argv[1:]
@@ -2009,14 +2005,8 @@ class PlotterCanvas(tk.Canvas):
 
         assert len(parts) % 2 == 1
 
-        pattern = []
-        numbers = []
-        for i in range(0, len(parts), 2):
-            pattern.append(parts[i])
-
-        for i in range(1, len(parts), 2):
-            numbers.append(float(parts[i]))
-
+        pattern = [parts[i] for i in range(0, len(parts), 2)]
+        numbers = [float(parts[i]) for i in range(1, len(parts), 2)]
         return (pattern, numbers)
 
     def extract_series_segments(self, data_lines, series_nr):

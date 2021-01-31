@@ -247,16 +247,14 @@ class CodeViewSyntaxColorer(SyntaxColorer):
             res = self.text.tag_nextrange(TODO, search_start, search_end)
             if res:
                 update_start = res[0]
-                update_end = res[1]
             else:
                 # maybe the range started earlier
                 res = self.text.tag_prevrange(TODO, search_start)
-                if res and self.text.compare(res[1], ">", search_end):
-                    update_start = search_start
-                    update_end = res[1]
-                else:
+                if not res or not self.text.compare(res[1], ">", search_end):
                     break
 
+                update_start = search_start
+            update_end = res[1]
             if self.text.compare(update_end, ">", search_end):
                 update_end = search_end
 
@@ -303,11 +301,7 @@ class ShellSyntaxColorer(SyntaxColorer):
 
 
 def update_coloring_on_event(event):
-    if hasattr(event, "text_widget"):
-        text = event.text_widget
-    else:
-        text = event.widget
-
+    text = event.text_widget if hasattr(event, "text_widget") else event.widget
     update_coloring_on_text(text, event)
 
 

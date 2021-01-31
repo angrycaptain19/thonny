@@ -66,13 +66,14 @@ class MicroPythonProxy(SubprocessProxy):
             self._lib_dirs = msg["lib_dirs"]
 
     def _get_time_args(self):
-        result = {
-            "sync_time": get_workbench().get_option(self.backend_name + ".sync_time", False),
+        return {
+            "sync_time": get_workbench().get_option(
+                self.backend_name + ".sync_time", False
+            ),
             "validate_time": get_workbench().get_option(
                 self.backend_name + ".validate_time", False
             ),
         }
-        return result
 
 
 class BareMetalMicroPythonProxy(MicroPythonProxy):
@@ -97,10 +98,13 @@ class BareMetalMicroPythonProxy(MicroPythonProxy):
             if len(potential) == 1:
                 self._port = potential[0][0]
             else:
-                if not potential and self.device_is_present_in_bootloader_mode():
-                    if self._propose_install_firmware():
-                        print("POSITIVE")
-                        return self._fix_port()
+                if (
+                    not potential
+                    and self.device_is_present_in_bootloader_mode()
+                    and self._propose_install_firmware()
+                ):
+                    print("POSITIVE")
+                    return self._fix_port()
 
                 self._port = None
                 message = dedent(
@@ -157,12 +161,10 @@ class BareMetalMicroPythonProxy(MicroPythonProxy):
 
         args.update(self._get_time_args())
 
-        cmd = [
+        return [
             thonny.plugins.micropython.bare_metal_backend.__file__,
             repr(args),
         ]
-
-        return cmd
 
     def _get_write_block_size(self):
         return get_workbench().get_option(self.backend_name + ".write_block_size")
@@ -332,15 +334,12 @@ class BareMetalMicroPythonProxy(MicroPythonProxy):
         port = get_workbench().get_option(cls.backend_name + ".port")
         if port == "webrepl":
             return True
-        if port == "auto":
-            potential_ports = cls._detect_potential_ports()
-            return len(potential_ports) > 0
-        else:
-            for p in list_serial_ports():
-                if p.device == port:
-                    return True
+        if port != "auto":
+            return any(p.device == port for p in list_serial_ports())
 
-            return False
+
+        potential_ports = cls._detect_potential_ports()
+        return len(potential_ports) > 0
 
     @classmethod
     def get_switcher_entries(cls):
@@ -564,16 +563,15 @@ class BareMetalMicroPythonConfigPage(BackendDetailsConfigPage):
         if not self.is_modified():
             return
 
-        else:
-            port_name = self.get_selected_port_name()
-            get_workbench().set_option(self.backend_name + ".port", port_name)
-            if self.webrepl_selected():
-                get_workbench().set_option(
-                    self.backend_name + ".webrepl_url", self._webrepl_url_var.get()
-                )
-                get_workbench().set_option(
-                    self.backend_name + ".webrepl_password", self._webrepl_password_var.get()
-                )
+        port_name = self.get_selected_port_name()
+        get_workbench().set_option(self.backend_name + ".port", port_name)
+        if self.webrepl_selected():
+            get_workbench().set_option(
+                self.backend_name + ".webrepl_url", self._webrepl_url_var.get()
+            )
+            get_workbench().set_option(
+                self.backend_name + ".webrepl_password", self._webrepl_password_var.get()
+            )
 
     def _on_change_port(self, *args):
         if self._port_desc_variable.get() == self._WEBREPL_OPTION_DESC:
@@ -624,7 +622,7 @@ class LocalMicroPythonProxy(MicroPythonProxy):
     def _get_launcher_with_args(self):
         import thonny.plugins.micropython.os_mp_backend
 
-        cmd = [
+        return [
             thonny.plugins.micropython.os_mp_backend.__file__,
             repr(
                 {
@@ -634,7 +632,6 @@ class LocalMicroPythonProxy(MicroPythonProxy):
                 }
             ),
         ]
-        return cmd
 
     def interrupt(self):
         # Don't interrupt local process, but direct it to the device
@@ -760,11 +757,10 @@ class SshMicroPythonProxy(MicroPythonProxy):
 
         args.update(self._get_time_args())
 
-        cmd = [
+        return [
             thonny.plugins.micropython.os_mp_backend.__file__,
             repr(args),
         ]
-        return cmd
 
     def interrupt(self):
         # Don't interrupt local process, but direct it to the device
@@ -884,11 +880,7 @@ def list_serial_ports():
 
 
 def port_exists(device):
-    for port in list_serial_ports():
-        if port.device == device:
-            return True
-
-    return False
+    return any(port.device == device for port in list_serial_ports())
 
 
 def list_serial_ports_with_descriptions():
@@ -948,12 +940,10 @@ def add_micropython_backend(
 
         if sync_time is None:
             sync_time = True
-        get_workbench().set_default(name + ".sync_time", sync_time)
     else:
         if sync_time is None:
             sync_time = False
-        get_workbench().set_default(name + ".sync_time", sync_time)
-
+    get_workbench().set_default(name + ".sync_time", sync_time)
     get_workbench().set_default(name + ".validate_time", validate_time)
     get_workbench().add_backend(name, proxy_class, description, config_page, sort_key=sort_key)
 

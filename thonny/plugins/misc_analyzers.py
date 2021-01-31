@@ -287,11 +287,11 @@ class ProgramNamingAnalyzer(ProgramAnalyzer):
         return module_names
 
     def _get_module_names(self, dir_path):
-        result = set()
-        for name in os.listdir(dir_path):
-            if "-" not in name:
-                result.add(name.replace(".py", ""))
-        return result
+        return {
+            name.replace(".py", "")
+            for name in os.listdir(dir_path)
+            if "-" not in name
+        }
 
 
 def load_plugin():

@@ -119,9 +119,7 @@ class TweakableText(tk.Text):
 
         if self.is_read_only():
             self.bell()
-        elif self._is_erroneous_delete(index1, index2):
-            pass
-        else:
+        elif not self._is_erroneous_delete(index1, index2):
             self.direct_delete(index1, index2, **kw)
 
     def _is_erroneous_delete(self, index1, index2):
@@ -378,7 +376,7 @@ class EnhancedText(TweakableText):
             if chars == last_line_of_prompt:
                 break
             chars = chars[:-1]
-            ncharsdeleted = ncharsdeleted + 1
+            ncharsdeleted += 1
             have = len(chars.expandtabs(self.tabwidth))
             if have <= want or chars[-1] not in " \t":
                 break
@@ -448,7 +446,7 @@ class EnhancedText(TweakableText):
             row, _ = map(int, last_visible_idx.split("."))
             line_count = self.get_line_count()
 
-            if row == line_count or row == line_count - 1:  # otherwise tk doesn't show last line
+            if row in [line_count, line_count - 1]:  # otherwise tk doesn't show last line
                 self.mark_set("insert", "end")
         except Exception as e:
             logger.exception("Could not perform page down", exc_info=e)
@@ -531,14 +529,13 @@ class EnhancedText(TweakableText):
         self._log_keypress_for_undo(event)
         if event.state & 0x0001:  # shift is pressed (http://stackoverflow.com/q/32426250/261181)
             return self.dedent_region(event)
+        # check whether there are letters before cursor on this line
+        index = self.index("insert")
+        left_text = self.get(index + " linestart", index)
+        if left_text.strip() == "" or self.has_selection():
+            return self.perform_smart_tab(event)
         else:
-            # check whether there are letters before cursor on this line
-            index = self.index("insert")
-            left_text = self.get(index + " linestart", index)
-            if left_text.strip() == "" or self.has_selection():
-                return self.perform_smart_tab(event)
-            else:
-                return self.perform_midline_tab(event)
+            return self.perform_midline_tab(event)
 
     def indent_region(self, event=None):
         return self._change_indentation(True)
@@ -642,11 +639,11 @@ class EnhancedText(TweakableText):
 
     def _make_blanks(self, n):
         # Make string that displays as n leading blanks.
-        if self.should_indent_with_tabs():
-            ntabs, nspaces = divmod(n, self.tabwidth)
-            return "\t" * ntabs + " " * nspaces
-        else:
+        if not self.should_indent_with_tabs():
             return " " * n
+
+        ntabs, nspaces = divmod(n, self.tabwidth)
+        return "\t" * ntabs + " " * nspaces
 
     def _on_undo(self, e):
         self._last_event_kind = "undo"

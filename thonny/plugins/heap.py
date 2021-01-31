@@ -68,9 +68,8 @@ class HeapView(MemoryFrame):
                 get_runner().send_command(InlineCommand("get_heap"))
 
     def _handle_heap_event(self, msg):
-        if self.winfo_ismapped():
-            if hasattr(msg, "heap"):
-                self._update_data(msg.heap)
+        if self.winfo_ismapped() and hasattr(msg, "heap"):
+            self._update_data(msg.heap)
 
     def _on_map(self, event):
         self.info_label.grid(row=0, column=1005)

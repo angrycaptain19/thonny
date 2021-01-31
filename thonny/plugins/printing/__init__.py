@@ -41,10 +41,10 @@ def can_print_current_script():
 
 def _export_text_as_html(text):
     last_line = int(float(text.index("end-1c")))
-    result = ""
-    for i in range(1, last_line + 1):
-        result += "<code>" + _export_line_as_html(text, i) + "</code>\n"
-    return result
+    return "".join(
+        "<code>" + _export_line_as_html(text, i) + "</code>\n"
+        for i in range(1, last_line + 1)
+    )
 
 
 def _export_line_as_html(text, lineno):

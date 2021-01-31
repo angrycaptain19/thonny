@@ -197,11 +197,7 @@ class Completer(tk.Listbox):
 
     def _move_selection(self, delta):
         selected = self.curselection()
-        if len(selected) == 0:
-            index = 0
-        else:
-            index = selected[0]
-
+        index = 0 if len(selected) == 0 else selected[0]
         index += delta
         index = max(0, min(self.size() - 1, index))
 
@@ -287,25 +283,23 @@ class ShellCompleter(Completer):
 
 
 def handle_autocomplete_request(event=None):
-    if event is None:
-        text = get_workbench().focus_get()
-    else:
-        text = event.widget
-
+    text = get_workbench().focus_get() if event is None else event.widget
     _handle_autocomplete_request_for_text(text)
 
 
 def _handle_autocomplete_request_for_text(text):
     if not hasattr(text, "autocompleter"):
-        if isinstance(text, (CodeViewText, ShellText)) and text.is_python_text():
-            if isinstance(text, CodeViewText):
-                text.autocompleter = Completer(text)
-            elif isinstance(text, ShellText):
-                text.autocompleter = ShellCompleter(text)
-            text.bind("<1>", text.autocompleter.on_text_click)
-        else:
+        if (
+            not isinstance(text, (CodeViewText, ShellText))
+            or not text.is_python_text()
+        ):
             return
 
+        if isinstance(text, CodeViewText):
+            text.autocompleter = Completer(text)
+        elif isinstance(text, ShellText):
+            text.autocompleter = ShellCompleter(text)
+        text.bind("<1>", text.autocompleter.on_text_click)
     text.autocompleter.handle_autocomplete_request()
 
 
@@ -317,12 +311,11 @@ def patched_perform_midline_tab(text, event):
             option_name = "edit.tab_complete_in_editor"
 
         if get_workbench().get_option(option_name):
-            if not text.has_selection():
-                _handle_autocomplete_request_for_text(text)
-                return "break"
-            else:
+            if text.has_selection():
                 return None
 
+            _handle_autocomplete_request_for_text(text)
+            return "break"
     return text.perform_dumb_tab(event)
 
 

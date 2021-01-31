@@ -90,10 +90,9 @@ def get_interpreter_completions(source: str, namespaces: List[Dict], sys_path=No
 def _get_new_jedi_project(sys_path):
     if not sys_path:
         return None
-    else:
-        import jedi
+    import jedi
 
-        return jedi.Project(path=sys_path[0], added_sys_path=sys_path)
+    return jedi.Project(path=sys_path[0], added_sys_path=sys_path)
 
 
 def _tweak_completions(completions):

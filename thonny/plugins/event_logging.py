@@ -89,7 +89,7 @@ class EventLogger:
 
         # select attributes
         data = {}
-        for name in attributes:
+        for name, value in attributes.items():
             # skip some attributes
             if (
                 name.startswith("_")
@@ -99,8 +99,6 @@ class EventLogger:
                 and name not in ["widget", "text_widget", "text_widget_context"]
             ):
                 continue
-
-            value = attributes[name]
 
             if isinstance(value, (tk.BaseWidget, tk.Tk)):
                 data[name + "_id"] = id(value)

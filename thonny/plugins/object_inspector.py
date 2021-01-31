@@ -68,20 +68,19 @@ class ObjectInspector(ttk.Frame):
             def on_click(event):
                 if self.active_page == page:
                     return
-                else:
-                    if self.active_page is not None:
-                        self.active_page.grid_forget()
-                        self.active_page.tab.configure(style="Inactive.ViewTab.TLabel")
+                if self.active_page is not None:
+                    self.active_page.grid_forget()
+                    self.active_page.tab.configure(style="Inactive.ViewTab.TLabel")
 
-                    self.active_page = page
-                    page.grid(row=1, column=0, sticky="nsew", padx=0)
-                    tab.configure(style="Active.ViewTab.TLabel")
-                    if (
-                        self.active_page == self.attributes_page
-                        and (self.object_info is None or not self.object_info.get("attributes"))
-                        and self.object_id is not None
-                    ):
-                        self.request_object_info()
+                self.active_page = page
+                page.grid(row=1, column=0, sticky="nsew", padx=0)
+                tab.configure(style="Active.ViewTab.TLabel")
+                if (
+                    self.active_page == self.attributes_page
+                    and (self.object_info is None or not self.object_info.get("attributes"))
+                    and self.object_id is not None
+                ):
+                    self.request_object_info()
 
             tab.bind("<1>", on_click)
 
@@ -555,9 +554,8 @@ class ElementsInspector(thonny.memory.MemoryFrame, ContentInspector):
         self.context_id = object_info["id"]
 
         self._clear_tree()
-        index = 0
         # TODO: don't show too big number of elements
-        for element in object_info["elements"]:
+        for index, element in enumerate(object_info["elements"]):
             node_id = self.tree.insert("", "end")
             if self.elements_have_indices:
                 self.tree.set(node_id, "index", index)
@@ -568,8 +566,6 @@ class ElementsInspector(thonny.memory.MemoryFrame, ContentInspector):
             self.tree.set(
                 node_id, "value", shorten_repr(element.repr, thonny.memory.MAX_REPR_LENGTH_IN_GRID)
             )
-            index += 1
-
         count = len(object_info["elements"])
         self.len_label.configure(text=" len: %d" % count)
 

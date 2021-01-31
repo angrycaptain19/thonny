@@ -51,8 +51,7 @@ class MicroPythonConnection:
                     raise TimeoutError("Reaction timeout. Bytes read: %s" % self._read_buffer)
 
         try:
-            data = self._read_buffer[:size]
-            return data
+            return self._read_buffer[:size]
         finally:
             del self._read_buffer[:size]
 

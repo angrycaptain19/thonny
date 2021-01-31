@@ -148,11 +148,7 @@ class Editor(ttk.Frame):
 
     def get_long_description(self):
 
-        if self._filename is None:
-            result = "<untitled>"
-        else:
-            result = self._filename
-
+        result = "<untitled>" if self._filename is None else self._filename
         try:
             index = self._code_view.text.index("insert")
             if index and "." in index:
@@ -284,12 +280,11 @@ class Editor(ttk.Frame):
 
     def write_local_file(self, save_filename, content_bytes, save_copy):
         try:
-            f = open(save_filename, mode="wb")
-            f.write(content_bytes)
-            f.flush()
-            # Force writes on disk, see https://learn.adafruit.com/adafruit-circuit-playground-express/creating-and-editing-code#1-use-an-editor-that-writes-out-the-file-completely-when-you-save-it
-            os.fsync(f)
-            f.close()
+            with open(save_filename, mode="wb") as f:
+                f.write(content_bytes)
+                f.flush()
+                # Force writes on disk, see https://learn.adafruit.com/adafruit-circuit-playground-express/creating-and-editing-code#1-use-an-editor-that-writes-out-the-file-completely-when-you-save-it
+                os.fsync(f)
             if not save_copy or save_filename == self._filename:
                 self._last_known_mtime = os.path.getmtime(save_filename)
             get_workbench().event_generate(
@@ -314,11 +309,7 @@ class Editor(ttk.Frame):
             self._code_view.set_file_type(None)
         else:
             ext = self._filename.split(".")[-1].lower()
-            if ext in ["py", "pyw", "pyi"]:
-                file_type = "python"
-            else:
-                file_type = None
-
+            file_type = "python" if ext in ["py", "pyw", "pyi"] else None
             self._code_view.set_file_type(file_type)
 
         self.update_appearance()
@@ -361,9 +352,8 @@ class Editor(ttk.Frame):
 
         if node == "local":
             return self.ask_new_local_path()
-        else:
-            assert node == "remote"
-            return self.ask_new_remote_path()
+        assert node == "remote"
+        return self.ask_new_remote_path()
 
     def ask_new_remote_path(self):
         target_path = ask_backend_path(self.winfo_toplevel(), "save")
@@ -671,7 +661,7 @@ class EditorNotebook(ui_utils.ClosableNotebook):
             os.path.abspath(name) for name in sys.argv[1:] if os.path.exists(name)
         ]
 
-        if len(cmd_line_filenames) > 0:
+        if cmd_line_filenames:
             filenames = cmd_line_filenames
         elif get_workbench().get_option("file.reopen_all_files"):
             filenames = get_workbench().get_option("file.open_files")
@@ -687,7 +677,7 @@ class EditorNotebook(ui_utils.ClosableNotebook):
 
             cur_file = get_workbench().get_option("file.current_file")
             # choose correct active file
-            if len(cmd_line_filenames) > 0:
+            if cmd_line_filenames:
                 self.show_file(cmd_line_filenames[0])
             elif cur_file and os.path.exists(cur_file):
                 self.show_file(cur_file)
@@ -787,11 +777,10 @@ class EditorNotebook(ui_utils.ClosableNotebook):
         for tab_index in reversed(range(len(self.winfo_children()))):
             if except_index is not None and tab_index == except_index:
                 continue
-            else:
-                editor = self.get_child_by_index(tab_index)
-                if self.check_allow_closing(editor):
-                    self.forget(editor)
-                    editor.destroy()
+            editor = self.get_child_by_index(tab_index)
+            if self.check_allow_closing(editor):
+                self.forget(editor)
+                editor.destroy()
 
     def _cmd_close_file(self):
         self.close_tab(self.index(self.select()))
@@ -823,10 +812,9 @@ class EditorNotebook(ui_utils.ClosableNotebook):
                 self.update_editor_title(editor)
 
     def _cmd_save_all_files_enabled(self):
-        for editor in self.get_all_editors():
-            if editor.save_file_enabled() == True:
-                return True
-        return False
+        return any(
+            editor.save_file_enabled() == True for editor in self.get_all_editors()
+        )
 
     def _cmd_save_file_as(self, node=None):
         if not self.get_current_editor():
@@ -851,11 +839,7 @@ class EditorNotebook(ui_utils.ClosableNotebook):
         old_filename = editor.get_filename()
         assert old_filename is not None
 
-        if is_remote_path(old_filename):
-            node = "remote"
-        else:
-            node = "local"
-
+        node = "remote" if is_remote_path(old_filename) else "local"
         self._cmd_save_file_as(node=node)
 
         if editor.get_filename() != old_filename:
@@ -911,11 +895,10 @@ class EditorNotebook(ui_utils.ClosableNotebook):
         self.select(self.get_child_by_index(next_index))
 
     def file_is_opened(self, path):
-        for editor in self.get_all_editors():
-            if editor.get_filename() and is_same_path(path, editor.get_filename()):
-                return True
-
-        return False
+        return any(
+            editor.get_filename() and is_same_path(path, editor.get_filename())
+            for editor in self.get_all_editors()
+        )
 
     def show_file(self, filename, text_range=None, set_focus=True, propose_dialog=True):
         # self.close_single_untitled_unmodified_editor()

@@ -18,10 +18,13 @@ setupdir = os.path.dirname(__file__)
 with open(os.path.join(setupdir, "thonny", "VERSION"), encoding="ASCII") as f:
     version = f.read().strip()
 
-requirements = []
-for line in open(os.path.join(setupdir, "requirements.txt"), encoding="ASCII"):
-    if line.strip() and not line.startswith("#"):
-        requirements.append(line)
+requirements = [
+    line
+    for line in open(
+        os.path.join(setupdir, "requirements.txt"), encoding="ASCII"
+    )
+    if line.strip() and not line.startswith("#")
+]
 
 setup(
     name="thonny",

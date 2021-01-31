@@ -72,11 +72,10 @@ class UnixMicroPythonBackend(MicroPythonBackend, ABC):
         result = self._which(executable)
         if result:
             return result
-        else:
-            msg = "Executable '%s' not found. Please check your configuration!" % executable
-            if not executable.startswith("/"):
-                msg += " You may need to provide its absolute path."
-            raise ConnectionFailedException(msg)
+        msg = "Executable '%s' not found. Please check your configuration!" % executable
+        if not executable.startswith("/"):
+            msg += " You may need to provide its absolute path."
+        raise ConnectionFailedException(msg)
 
     def _which(self, executable):
         raise NotImplementedError()
@@ -219,10 +218,7 @@ class UnixMicroPythonBackend(MicroPythonBackend, ABC):
     def _forward_unexpected_output(self, stream_name="stdout"):
         "Invoked between commands"
         data = self._connection.read_all()
-        if data.endswith(NORMAL_PROMPT):
-            out = data[: -len(NORMAL_PROMPT)]
-        else:
-            out = data
+        out = data[: -len(NORMAL_PROMPT)] if data.endswith(NORMAL_PROMPT) else data
         self._send_output(self._decode(out), "stdout")
 
     def _write(self, data):

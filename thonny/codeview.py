@@ -86,10 +86,9 @@ class SyntaxText(EnhancedText):
     def perform_smart_backspace(self, event):
         if self.file_type == "python":
             return EnhancedText.perform_smart_backspace(self, event)
-        else:
-            self._log_keypress_for_undo(event)
-            # let the default action work
-            return
+        self._log_keypress_for_undo(event)
+        # let the default action work
+        return
 
     def should_indent_with_tabs(self):
         return get_workbench().get_option("edit.indent_with_tabs")
@@ -242,11 +241,7 @@ class CodeView(tktextext.EnhancedTextFrame):
         if not chars:
             return True
 
-        non_text_char_count = 0
-        for ch in chars:
-            if ch in NON_TEXT_CHARS:
-                non_text_char_count += 1
-
+        non_text_char_count = sum(ch in NON_TEXT_CHARS for ch in chars)
         return non_text_char_count / len(chars) < 0.01
 
     def set_content(self, content, keep_undo=False):
@@ -323,11 +318,11 @@ class CodeView(tktextext.EnhancedTextFrame):
             self.text.see("%s -1 lines" % start)
 
     def get_breakpoint_line_numbers(self):
-        result = set()
-        for num_line in self._gutter.get("1.0", "end").splitlines():
-            if BREAKPOINT_SYMBOL in num_line:
-                result.add(int(num_line.replace(BREAKPOINT_SYMBOL, "")))
-        return result
+        return {
+            int(num_line.replace(BREAKPOINT_SYMBOL, ""))
+            for num_line in self._gutter.get("1.0", "end").splitlines()
+            if BREAKPOINT_SYMBOL in num_line
+        }
 
     def get_selected_range(self):
         if self.text.has_selection():
@@ -422,7 +417,7 @@ def perform_python_return(text: EnhancedText, event):
         i = 0
         n = len(left_part)
         while i < n and left_part[i] in " \t":
-            i = i + 1
+            i += 1
 
         # is it only whitespace?
         if i == n:
@@ -528,7 +523,7 @@ def perform_simple_return(text: EnhancedText, event):
         i = 0
         n = len(left_part)
         while i < n and left_part[i] in " \t":
-            i = i + 1
+            i += 1
 
         # start the new line with the same whitespace
         text.insert("insert", "\n" + left_part[:i])

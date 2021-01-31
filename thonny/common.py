@@ -235,38 +235,38 @@ def normpath_with_actual_case(name: str) -> str:
     assert os.path.isabs(name) or os.path.ismount(name), "Not abs nor mount: " + name
     assert os.path.exists(name), "Not exists: " + name
 
-    if os.name == "nt":
-        # https://stackoverflow.com/questions/2113822/python-getting-filename-case-as-stored-in-windows/2114975
-        name = os.path.normpath(name)
-
-        from ctypes import create_unicode_buffer, windll
-
-        buf = create_unicode_buffer(512)
-        # GetLongPathNameW alone doesn't fix filename part
-        windll.kernel32.GetShortPathNameW(name, buf, 512)  # @UndefinedVariable
-        windll.kernel32.GetLongPathNameW(buf.value, buf, 512)  # @UndefinedVariable
-        result = buf.value
-
-        if result.casefold() != name.casefold():
-            # Sometimes GetShortPathNameW + GetLongPathNameW doesn't work
-            # see eg. https://github.com/thonny/thonny/issues/925
-            windll.kernel32.GetLongPathNameW(name, buf, 512)  # @UndefinedVariable
-            result = buf.value
-
-            if result.casefold() != name.casefold():
-                result = name
-
-        if result[1] == ":":
-            # ensure drive letter is capital
-            return result[0].upper() + result[1:]
-        else:
-            return result
-    else:
+    if os.name != "nt":
         # easy on Linux
         # too difficult on mac
         # https://stackoverflow.com/questions/14515073/in-python-on-osx-with-hfs-how-can-i-get-the-correct-case-of-an-existing-filenam
         # Hopefully only correct case comes into Thonny (eg. via open dialog)
         return os.path.normpath(name)
+
+    # https://stackoverflow.com/questions/2113822/python-getting-filename-case-as-stored-in-windows/2114975
+    name = os.path.normpath(name)
+
+    from ctypes import create_unicode_buffer, windll
+
+    buf = create_unicode_buffer(512)
+    # GetLongPathNameW alone doesn't fix filename part
+    windll.kernel32.GetShortPathNameW(name, buf, 512)  # @UndefinedVariable
+    windll.kernel32.GetLongPathNameW(buf.value, buf, 512)  # @UndefinedVariable
+    result = buf.value
+
+    if result.casefold() != name.casefold():
+        # Sometimes GetShortPathNameW + GetLongPathNameW doesn't work
+        # see eg. https://github.com/thonny/thonny/issues/925
+        windll.kernel32.GetLongPathNameW(name, buf, 512)  # @UndefinedVariable
+        result = buf.value
+
+        if result.casefold() != name.casefold():
+            result = name
+
+    if result[1] == ":":
+        # ensure drive letter is capital
+        return result[0].upper() + result[1:]
+    else:
+        return result
 
 
 def is_same_path(name1: str, name2: str) -> bool:
@@ -337,7 +337,7 @@ def get_site_dir(symbolic_name, executable=None):
             .strip()
         )
 
-    return result if result else None
+    return result or None
 
 
 def get_base_executable():
@@ -471,9 +471,7 @@ def get_windows_volumes_info():
 
     bitmask = windll.kernel32.GetLogicalDrives()  # @UndefinedVariable
     for letter in string.ascii_uppercase:
-        if not bitmask & 1:
-            pass
-        else:
+        if bitmask & 1:
             drive_type = all_drive_types[
                 windll.kernel32.GetDriveTypeW("%s:\\" % letter)
             ]  # @UndefinedVariable
@@ -631,16 +629,16 @@ def universal_dirname(path: str) -> str:
 
 def universal_relpath(path: str, context: str) -> str:
     """Tries to give relative path"""
-    if "/" in path:
-        import pathlib
-
-        p = pathlib.PurePosixPath(path)
-        try:
-            return str(p.relative_to(context))
-        except ValueError:
-            return path
-    else:
+    if "/" not in path:
         return os.path.relpath(path, context)
+
+    import pathlib
+
+    p = pathlib.PurePosixPath(path)
+    try:
+        return str(p.relative_to(context))
+    except ValueError:
+        return path
 
 
 def get_python_version_string(version_info: Optional[Tuple] = None, maxsize=None):

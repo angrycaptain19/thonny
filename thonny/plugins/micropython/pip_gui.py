@@ -62,11 +62,7 @@ class MicroPythonPipDialog(BackendPipDialog):
             )
 
     def _delete_selected(self):
-        paths = []
-        for cb in self._checkboxes:
-            if cb.variable.get():
-                paths.append(cb.full_path)
-
+        paths = [cb.full_path for cb in self._checkboxes if cb.variable.get()]
         if paths:
             self._delete_paths(paths)
             self._start_update_list(self.current_package_data["info"]["name"])
@@ -168,11 +164,7 @@ class MicroPythonPipDialog(BackendPipDialog):
         self._select_list_item(msg.module_name)
 
     def _append_file_checkbox(self, full_path, context_dir):
-        if context_dir:
-            text = full_path[len(context_dir) :].strip("/")
-        else:
-            text = full_path
-
+        text = full_path[len(context_dir) :].strip("/") if context_dir else full_path
         if self._can_delete(full_path):
             cb = ttk.Checkbutton(self.info_text, text=text)
             var = tk.IntVar(value=1)
@@ -233,8 +225,7 @@ class MicroPythonPipDialog(BackendPipDialog):
         return not path.startswith("/usr/lib")
 
     def _get_target_directory(self):
-        target_dir = self._backend_proxy.get_pip_target_dir()
-        return target_dir
+        return self._backend_proxy.get_pip_target_dir()
 
     def _read_only(self):
         return self._get_target_directory() is None
@@ -266,11 +257,7 @@ class MicroPythonPipDialog(BackendPipDialog):
         else:
             dir_tags = ()
 
-        if len(self._backend_proxy.get_lib_dirs()) == 1:
-            self._append_info_text(self._get_target_directory(), dir_tags)
-            self._append_info_text("\n")
-        else:
-
+        if len(self._backend_proxy.get_lib_dirs()) != 1:
             self.info_text.direct_insert(
                 "end", tr("This dialog lists top-level modules from following directories:\n")
             )
@@ -283,8 +270,8 @@ class MicroPythonPipDialog(BackendPipDialog):
             self._append_info_text("\n")
             self._append_info_text(tr("New packages will be installed to") + "\n")
             self._append_info_text("• ")
-            self._append_info_text(self._get_target_directory(), dir_tags)
-            self._append_info_text("\n")
+        self._append_info_text(self._get_target_directory(), dir_tags)
+        self._append_info_text("\n")
 
     def _show_read_only_instructions(self):
         self._append_info_text(tr("Not available") + "\n", ("caption",))
@@ -439,10 +426,7 @@ class InstallAndUploadDialog(InlineCommandDialog):
             super().on_done(success)
             if self._stage == "upload":
                 # Returcode is required by the superclass
-                if success:
-                    self.returncode = 0
-                else:
-                    self.returncode = -1
+                self.returncode = 0 if success else -1
             return
 
         assert self._stage == "install"

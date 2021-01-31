@@ -229,11 +229,7 @@ def handle_editor_event(event):
 
 
 def handle_events(event):
-    if hasattr(event, "text_widget"):
-        text = event.text_widget
-    else:
-        text = event.widget
-
+    text = event.text_widget if hasattr(event, "text_widget") else event.widget
     configure_and_add_tags(text)
 
 

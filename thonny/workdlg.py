@@ -142,14 +142,10 @@ class WorkDialog(CommonDialog):
             if self._state == "closed":
                 return
 
-        if self._state == "idle":
-            if self.is_ready_for_work():
-                self._ok_button.configure(state="normal")
-            else:
-                self._ok_button.configure(state="disabled")
+        if self._state == "idle" and self.is_ready_for_work():
+            self._ok_button.configure(state="normal")
         else:
             self._ok_button.configure(state="disabled")
-
         if self._state == "done":
             set_text_if_different(self._cancel_button, tr("Close"))
         else:

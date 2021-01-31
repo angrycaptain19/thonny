@@ -85,10 +85,7 @@ class ParenMatcher:
             tags = self.text.tag_names(index)
             if "string3" in tags or "open_string3" in tags:
                 # not a block start
-                if backwards:
-                    start_position = index
-                else:
-                    start_position = index + " +1c"
+                start_position = index if backwards else index + " +1c"
             else:
                 break
 
@@ -210,10 +207,7 @@ def update_highlighting_move(event):
     # needs delay because selecting with mouse causes many events
     # and I don't know how to distinguish selection from other moves
     t = time.time()
-    if t - _last_move_time > 0.1:
-        delay = None
-    else:
-        delay = 300
+    delay = None if t - _last_move_time > 0.1 else 300
     _last_move_time = t
     _update_highlighting(event, False, True, delay=delay)
 

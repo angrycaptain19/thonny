@@ -73,7 +73,7 @@ def read_lines(sock):
     while True:
         s1 = read_line(sock)
         s += s1
-        if s1 == b"\r\n" or s1 == b"":
+        if s1 in [b"\r\n", b""]:
             break
     return s
 
@@ -165,7 +165,7 @@ def url_open(url):
         l = read_line(s)
         protover, status, msg = l.split(None, 2)
         if status != b"200":
-            if status == b"404" or status == b"301":
+            if status in [b"404", b"301"]:
                 raise NotFoundError("Package not found")
             raise ValueError(status)
         while 1:
@@ -293,7 +293,7 @@ def main():
     while i < len(sys.argv) and sys.argv[i][0] == "-":
         opt = sys.argv[i]
         i += 1
-        if opt == "-h" or opt == "--help":
+        if opt in ["-h", "--help"]:
             help_msg()
             return
         elif opt == "-p":

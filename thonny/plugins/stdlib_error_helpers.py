@@ -105,11 +105,11 @@ class SyntaxErrorHelper(ErrorHelper):
                     and self.tokens[i].string != ":"
                 ):
 
-                    old_i = i
                     if self.tokens[i].string in "([{":
                         i = self._skip_braced_part(i)
-                        assert i > old_i
-                        if i == len(self.tokens):
+                        old_i = i
+                        assert old_i > old_i
+                        if old_i == len(self.tokens):
                             return None
                     else:
                         i += 1
@@ -351,8 +351,8 @@ class NameErrorHelper(ErrorHelper):
 
         if self._is_call_function():
             relevance = 5
-            for mod in likely_importable_functions:
-                if self.name in likely_importable_functions[mod]:
+            for mod, value in likely_importable_functions.items():
+                if self.name in value:
                     relevance += 3
                     body = (
                         "If you meant `%s` from module `%s`, then add\n\n`from %s import %s`\n\nto the beginning of your script."
@@ -497,18 +497,14 @@ class AttributeErrorHelper(ErrorHelper):
 
     def _sug_wrong_attribute_instead_of_len(self):
 
-        if self.type_name == "str":
-            goal = "length"
-        elif self.type_name == "bytes":
+        if self.type_name == "bytes":
             goal = "number of bytes"
-        elif self.type_name == "list":
-            goal = "number of elements"
-        elif self.type_name == "tuple":
-            goal = "number of elements"
-        elif self.type_name == "set":
-            goal = "number of elements"
         elif self.type_name == "dict":
             goal = "number of entries"
+        elif self.type_name in ["list", "tuple", "set"]:
+            goal = "number of elements"
+        elif self.type_name == "str":
+            goal = "length"
         else:
             return None
 
@@ -692,9 +688,8 @@ def _get_phrase_for_object(type_name, with_article=True):
 
     if with_article:
         return result
-    else:
-        _, rest = result.split(" ", maxsplit=1)
-        return rest
+    _, rest = result.split(" ", maxsplit=1)
+    return rest
 
 
 def _get_sample_for_type(type_name):

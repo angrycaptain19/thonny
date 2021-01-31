@@ -7,12 +7,8 @@ from time import strptime
 
 
 def parse_log_file(filename):
-    f = open(filename, encoding="UTF-8")
-    events = []
-    for line in f:
-        events.append(parse_log_line(line))
-
-    f.close()
+    with open(filename, encoding="UTF-8") as f:
+        events = [parse_log_line(line) for line in f]
     return events
 
 

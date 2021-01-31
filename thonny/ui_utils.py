@@ -250,7 +250,7 @@ class AutomaticPanedWindow(tk.PanedWindow):
             ):
                 if (
                     not hasattr(sibling, "position_key")
-                    or sibling.position_key == None
+                    or sibling.position_key is None
                     or sibling.position_key > child.position_key
                 ):
                     pos = sibling
@@ -642,7 +642,7 @@ class AutomaticNotebook(ClosableNotebook):
             for sibling in map(self.nametowidget, self.tabs()):
                 if (
                     not hasattr(sibling, "position_key")
-                    or sibling.position_key == None
+                    or sibling.position_key is None
                     or sibling.position_key > child.position_key
                 ):
                     pos = sibling
@@ -766,7 +766,7 @@ def sequence_to_accelerator(sequence):
     # Tweaking individual parts
     parts = accelerator.split("-")
     # tkinter shows shift with capital letter, but in shortcuts it's customary to include it explicitly
-    if len(parts[-1]) == 1 and parts[-1].isupper() and not "Shift" in parts:
+    if len(parts[-1]) == 1 and parts[-1].isupper() and "Shift" not in parts:
         parts.insert(-1, "Shift")
 
     # even when shift is not required, it's customary to show shortcut with capital letter
@@ -841,11 +841,7 @@ class EnhancedTextWithLogging(tktextext.EnhancedText):
         try:
             # index1 may be eg "sel.first" and it doesn't make sense *after* deletion
             concrete_index1 = self.index(index1)
-            if index2 is not None:
-                concrete_index2 = self.index(index2)
-            else:
-                concrete_index2 = None
-
+            concrete_index2 = self.index(index2) if index2 is not None else None
             chars = self.get(index1, index2)
             self._last_event_changed_line_count = "\n" in chars
             line_before = self.get(
@@ -1266,10 +1262,7 @@ class NoteBox(CommonDialog):
             focus_y += focus[1]
             focus_height = focus[3]
 
-        elif focus is None:
-            pass
-
-        else:
+        elif focus is not None:
             raise TypeError("Unsupported focus")
 
         # Compute dimensions of the note
@@ -1473,16 +1466,17 @@ def try_remove_linenumbers(text, master):
 
 def has_line_numbers(text):
     lines = text.splitlines()
-    return len(lines) > 2 and all([len(split_after_line_number(line)) == 2 for line in lines])
+    return len(lines) > 2 and all(
+        len(split_after_line_number(line)) == 2 for line in lines
+    )
 
 
 def split_after_line_number(s):
     parts = re.split(r"(^\s*\d+\.?)", s)
     if len(parts) == 1:
         return parts
-    else:
-        assert len(parts) == 3 and parts[0] == ""
-        return parts[1:]
+    assert len(parts) == 3 and parts[0] == ""
+    return parts[1:]
 
 
 def remove_line_numbers(s):
@@ -1994,11 +1988,10 @@ class _ZenityDialogProvider:
         )
         if result.returncode == 0:
             return result.stdout.strip()
-        else:
-            # TODO: log problems
-            print(result.stderr, file=sys.stderr)
-            # could check stderr, but it may contain irrelevant warnings
-            return None
+        # TODO: log problems
+        print(result.stderr, file=sys.stderr)
+        # could check stderr, but it may contain irrelevant warnings
+        return None
 
 
 def _options_to_zenity_filename(options):
@@ -2041,13 +2034,16 @@ def handle_mistreated_latin_shortcuts(registry, event):
         simplified_state |= 0x01
 
     # print(simplified_state, event.keycode)
-    if (simplified_state, event.keycode) in registry:
-        if event.keycode != ord(event.char) and event.keysym in (None, "??"):
-            # keycode and char doesn't match,
-            # this means non-latin keyboard
-            for handler, tester in registry[(simplified_state, event.keycode)]:
-                if tester is None or tester():
-                    handler()
+    if (
+        (simplified_state, event.keycode) in registry
+        and event.keycode != ord(event.char)
+        and event.keysym in (None, "??")
+    ):
+        # keycode and char doesn't match,
+        # this means non-latin keyboard
+        for handler, tester in registry[(simplified_state, event.keycode)]:
+            if tester is None or tester():
+                handler()
 
 
 def show_dialog(dlg, master=None, geometry=True, min_left=0, min_top=0):

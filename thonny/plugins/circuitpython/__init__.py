@@ -125,7 +125,7 @@ class CircuitPythonFlashingDialog(Uf2FlashingDialog):
         if self._release_info is None or self._devices_info is None:
             return None
 
-        if not "tag_name" in self._release_info:
+        if "tag_name" not in self._release_info:
             raise RuntimeError("Could not find tag_name from %s" % self._get_release_info_url())
 
         release = self._release_info["tag_name"]

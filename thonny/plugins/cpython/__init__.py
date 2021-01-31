@@ -77,7 +77,7 @@ class CPythonProxy(SubprocessProxy):
         Each ToplevelResponse is supposed to tell, whether gui is active
         and needs updating.
         """
-        if not "gui_is_active" in msg:
+        if "gui_is_active" not in msg:
             return
 
         if msg["gui_is_active"] and self._gui_update_loop_id is None:
@@ -318,11 +318,9 @@ def get_private_venv_executable():
     venv_path = get_private_venv_path()
 
     if running_on_windows():
-        exe = os.path.join(venv_path, "Scripts", WINDOWS_EXE)
+        return os.path.join(venv_path, "Scripts", WINDOWS_EXE)
     else:
-        exe = os.path.join(venv_path, "bin", "python3")
-
-    return exe
+        return os.path.join(venv_path, "bin", "python3")
 
 
 def _get_venv_info(venv_path):

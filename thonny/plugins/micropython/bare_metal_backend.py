@@ -356,8 +356,7 @@ class BareMetalMicroPythonBackend(MicroPythonBackend, UploadDownloadMixin):
             % indent(specific_script, "    ")
         )
 
-        val = self._evaluate(script)
-        return val
+        return self._evaluate(script)
 
     def _get_actual_time_tuple_on_device(self):
         script = dedent(
@@ -641,12 +640,11 @@ class BareMetalMicroPythonBackend(MicroPythonBackend, UploadDownloadMixin):
             # https://github.com/thonny/thonny/issues/1545
             time.sleep(0.01)
             response += self._connection.read_all()
-            if response == FIRST_RAW_PROMPT:
-                self._last_prompt = FIRST_RAW_PROMPT
-                raise RawPasteNotSupportedError()
-            else:
+            if response != FIRST_RAW_PROMPT:
                 raise AssertionError("Got %r instead of raw-paste confirmation" % response)
 
+            self._last_prompt = FIRST_RAW_PROMPT
+            raise RawPasteNotSupportedError()
         self._raw_paste_write(script_bytes)
         self._connection.set_unicode_guard(True)
 
@@ -870,10 +868,9 @@ class BareMetalMicroPythonBackend(MicroPythonBackend, UploadDownloadMixin):
                 ):
                     pending += self._connection.soft_read(1)
                     self._connection.unread(pending)
-                    pending = b""
                 else:
                     output_consumer(self._decode(pending), stream_name)
-                    pending = b""
+                pending = b""
                 continue
 
             for potential_prompt in prompts:
@@ -886,7 +883,6 @@ class BareMetalMicroPythonBackend(MicroPythonBackend, UploadDownloadMixin):
                         # most likely not a Python prompt, let's forget about it
                         output_consumer(self._decode(pending), stream_name)
                         pending = b""
-                        continue
                     else:
                         # Let's try the possible prefix again in the next iteration
                         # (I'm unreading otherwise the read_until won't see the whole prompt
@@ -896,8 +892,7 @@ class BareMetalMicroPythonBackend(MicroPythonBackend, UploadDownloadMixin):
                         try_again = pending[-n:]
                         pending = pending[:-n]
                         self._connection.unread(try_again + follow_up)
-                        continue
-
+                    continue
             else:
                 # No prompt in sight.
                 # Output and keep working.
@@ -923,11 +918,7 @@ class BareMetalMicroPythonBackend(MicroPythonBackend, UploadDownloadMixin):
             met_prompt = False
             while data.endswith(NORMAL_PROMPT) or data.endswith(FIRST_RAW_PROMPT):
                 # looks like the device was resetted
-                if data.endswith(NORMAL_PROMPT):
-                    prompt = NORMAL_PROMPT
-                else:
-                    prompt = FIRST_RAW_PROMPT
-
+                prompt = NORMAL_PROMPT if data.endswith(NORMAL_PROMPT) else FIRST_RAW_PROMPT
                 if not met_prompt:
                     met_prompt = True
                     self._last_prompt = prompt
@@ -1290,10 +1281,7 @@ class BareMetalMicroPythonBackend(MicroPythonBackend, UploadDownloadMixin):
             block = source_fp.read(block_size)
 
             if block:
-                if hex_mode:
-                    script = "__W(%r)" % binascii.hexlify(block)
-                else:
-                    script = "__W(%r)" % block
+                script = "__W(%r)" % binascii.hexlify(block) if hex_mode else "__W(%r)" % block
                 out, err = self._execute(script, capture_output=True)
                 if out or err:
                     self._show_error(
@@ -1483,28 +1471,23 @@ class BareMetalMicroPythonBackend(MicroPythonBackend, UploadDownloadMixin):
         label = self._get_fs_mount_label()
         if label is None:
             return None
+        candidates = find_volumes_by_name(
+            self._get_fs_mount_label(),
+            # querying A can be very slow
+            skip_letters="A",
+        )
+        if len(candidates) == 0:
+            raise RuntimeError("Could not find volume " + self._get_fs_mount_label())
+        elif len(candidates) > 1:
+            raise RuntimeError("Found several possible mount points: %s" % candidates)
         else:
-            candidates = find_volumes_by_name(
-                self._get_fs_mount_label(),
-                # querying A can be very slow
-                skip_letters="A",
-            )
-            if len(candidates) == 0:
-                raise RuntimeError("Could not find volume " + self._get_fs_mount_label())
-            elif len(candidates) > 1:
-                raise RuntimeError("Found several possible mount points: %s" % candidates)
-            else:
-                return candidates[0]
+            return candidates[0]
 
     def _should_hexlify(self, path):
         if "binascii" not in self._builtin_modules and "ubinascii" not in self._builtin_modules:
             return False
 
-        for ext in (".py", ".txt", ".csv"):
-            if path.lower().endswith(ext):
-                return False
-
-        return True
+        return not any(path.lower().endswith(ext) for ext in (".py", ".txt", ".csv"))
 
     def _is_connected(self):
         return self._connection._error is None

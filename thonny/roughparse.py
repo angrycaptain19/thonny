@@ -284,7 +284,7 @@ class RoughParser:
         i, n = 0, len(str)
         while i < n:
             ch = str[i]
-            i = i + 1
+            i += 1
 
             # cases are checked in decreasing order of frequency
             if ch == "x":
@@ -301,29 +301,29 @@ class RoughParser:
                 level = level + 1
                 continue
 
-            if ch == ")":
+            elif ch == ")":
                 if level:
                     level = level - 1
                     # else the program is invalid, but we can't complain
                 continue
 
-            if ch == '"' or ch == "'":
+            if ch in ['"', "'"]:
                 # consume the string
                 quote = ch
                 if str[i - 1 : i + 2] == quote * 3:
                     quote = quote * 3
                 firstlno = lno
                 w = len(quote) - 1
-                i = i + w
+                i += w
                 while i < n:
                     ch = str[i]
-                    i = i + 1
+                    i += 1
 
                     if ch == "x":
                         continue
 
                     if str[i - 1 : i + w] == quote:
-                        i = i + w
+                        i += w
                         break
 
                     if ch == "\n":
@@ -342,10 +342,10 @@ class RoughParser:
                         assert i < n
                         if str[i] == "\n":
                             lno = lno + 1
-                        i = i + 1
+                        i += 1
                         continue
 
-                    # else comment char or paren inside string
+                                # else comment char or paren inside string
 
                 else:
                     # didn't break out of the loop, so we're still
@@ -481,7 +481,7 @@ class RoughParser:
                 bracketing.append((p, len(stack)))
                 continue
 
-            if ch == '"' or ch == "'":
+            if ch in ['"', "'"]:
                 # consume string
                 # Note that study1 did this with a Python loop, but
                 # we use a regexp here; the reason is speed in both
@@ -585,7 +585,7 @@ class RoughParser:
                 if level:
                     level = level - 1
                 i = i + 1
-            elif ch == '"' or ch == "'":
+            elif ch in ['"', "'"]:
                 i = _match_stringre(str, i, endpos).end()
             elif ch == "#":
                 break
