@@ -400,17 +400,17 @@ class MainCPythonBackend(MainBackend):
         )
 
     def _cmd_cd(self, cmd):
-        if len(cmd.args) == 1:
-            path = cmd.args[0]
-            try:
-                os.chdir(path)
-                return ToplevelResponse()
-            except FileNotFoundError:
-                raise UserError("No such folder: " + path)
-            except OSError as e:
-                raise UserError("\n".join(traceback.format_exception_only(type(e), e)))
-        else:
+        if len(cmd.args) != 1:
             raise UserError("cd takes one parameter")
+
+        path = cmd.args[0]
+        try:
+            os.chdir(path)
+            return ToplevelResponse()
+        except FileNotFoundError:
+            raise UserError("No such folder: " + path)
+        except OSError as e:
+            raise UserError("\n".join(traceback.format_exception_only(type(e), e)))
 
     def _cmd_Run(self, cmd):
         self.switch_env_to_script_mode(cmd)
@@ -572,10 +572,7 @@ class MainCPythonBackend(MainBackend):
         raise RuntimeError("Frame '{0}' not found".format(cmd.frame_id))
 
     def _cmd_get_heap(self, cmd):
-        result = {}
-        for key in self._heap:
-            result[key] = self.export_value(self._heap[key])
-
+        result = {key: self.export_value(self._heap[key]) for key in self._heap}
         return InlineResponse("get_heap", heap=result)
 
     def _cmd_shell_autocomplete(self, cmd):
@@ -842,30 +839,30 @@ class MainCPythonBackend(MainBackend):
     def _execute_file(self, cmd, executor_class):
         self._check_update_tty_mode(cmd)
 
-        if len(cmd.args) >= 1:
-            sys.argv = cmd.args
-            filename = cmd.args[0]
-            if filename == "-c" or os.path.isabs(filename):
-                full_filename = filename
-            else:
-                full_filename = os.path.abspath(filename)
-
-            if full_filename == "-c":
-                source = cmd.source
-            else:
-                with tokenize.open(full_filename) as fp:
-                    source = fp.read()
-
-            for preproc in self._source_preprocessors:
-                source = preproc(source, cmd)
-
-            result_attributes = self._execute_source(
-                source, full_filename, "exec", executor_class, cmd, self._ast_postprocessors
-            )
-            result_attributes["filename"] = full_filename
-            return ToplevelResponse(command_name=cmd.name, **result_attributes)
-        else:
+        if len(cmd.args) < 1:
             raise UserError("Command '%s' takes at least one argument" % cmd.name)
+
+        sys.argv = cmd.args
+        filename = cmd.args[0]
+        if filename == "-c" or os.path.isabs(filename):
+            full_filename = filename
+        else:
+            full_filename = os.path.abspath(filename)
+
+        if full_filename == "-c":
+            source = cmd.source
+        else:
+            with tokenize.open(full_filename) as fp:
+                source = fp.read()
+
+        for preproc in self._source_preprocessors:
+            source = preproc(source, cmd)
+
+        result_attributes = self._execute_source(
+            source, full_filename, "exec", executor_class, cmd, self._ast_postprocessors
+        )
+        result_attributes["filename"] = full_filename
+        return ToplevelResponse(command_name=cmd.name, **result_attributes)
 
     def _execute_source(
         self, source, filename, execution_mode, executor_class, cmd, ast_postprocessors=[]
@@ -1352,11 +1349,7 @@ class Tracer(Executor):
         # first (automatic) stepping command depends on whether any breakpoints were set or not
         breakpoints = self._original_cmd.breakpoints
         assert isinstance(breakpoints, dict)
-        if breakpoints:
-            command_name = "resume"
-        else:
-            command_name = "step_into"
-
+        command_name = "resume" if breakpoints else "step_into"
         self._current_command = DebuggerCommand(
             command_name,
             state=None,
@@ -1779,15 +1772,15 @@ class NiceTracer(Tracer):
         spec = PathFinder.find_spec(fullname, path, target)
 
         if (
-            spec is not None
-            and isinstance(spec.loader, SourceFileLoader)
-            and getattr(spec, "origin", None)
-            and self._is_interesting_module_file(spec.origin)
+            spec is None
+            or not isinstance(spec.loader, SourceFileLoader)
+            or not getattr(spec, "origin", None)
+            or not self._is_interesting_module_file(spec.origin)
         ):
-            spec.loader = FancySourceFileLoader(fullname, spec.origin, self)
-            return spec
-        else:
             return super().find_spec(fullname, path, target)
+
+        spec.loader = FancySourceFileLoader(fullname, spec.origin, self)
+        return spec
 
     def is_in_past(self):
         return self._current_state_index < len(self._saved_states) - 1
@@ -1888,9 +1881,6 @@ class NiceTracer(Tracer):
                     # There may be more events coming from upper (system) frames
                     # but we're not interested in those
                     sys.settrace(None)
-            else:
-                pass
-
         else:
             self._fresh_exception = None
 
@@ -2246,11 +2236,7 @@ class NiceTracer(Tracer):
         )
 
     def _frame_is_alive(self, frame_id):
-        for frame in self._custom_stack:
-            if id(frame.system_frame) == frame_id:
-                return True
-
-        return False
+        return any(id(frame.system_frame) == frame_id for frame in self._custom_stack)
 
     def _export_stack(self):
         result = []
@@ -2324,8 +2310,7 @@ class NiceTracer(Tracer):
 
         def add_tag(node, tag):
             if not hasattr(node, "tags"):
-                node.tags = set()
-                node.tags.add("class=" + node.__class__.__name__)
+                node.tags = {"class=" + node.__class__.__name__}
             node.tags.add(tag)
 
         # ignore module docstring if it is before from __future__ import
@@ -2798,7 +2783,7 @@ def format_exception_with_frame_info(e_type, e_value, e_traceback, shorten_filen
             yield (_traceback_message, None, None, None)
 
             tb_temp = tb
-            for entry in traceback.extract_tb(tb):
+            for entry in traceback.extract_tb(tb_temp):
                 assert tb_temp is not None  # actual tb doesn't end before extract_tb
                 if "cpython_backend" not in entry.filename and (
                     not entry.filename.endswith(os.sep + "ast.py")

@@ -132,7 +132,7 @@ def get_ipc_file_path():
     ipc_dir = os.path.join(base_dir, "thonny-%s" % username)
     os.makedirs(ipc_dir, exist_ok=True)
 
-    if not platform.system() == "Windows":
+    if platform.system() != "Windows":
         os.chmod(ipc_dir, 0o700)
 
     _IPC_FILE = os.path.join(ipc_dir, "ipc.sock")
@@ -142,17 +142,17 @@ def get_ipc_file_path():
 def _check_welcome():
     from thonny import misc_utils
 
-    if not os.path.exists(CONFIGURATION_FILE) and not misc_utils.running_on_rpi():
-        from thonny.config import ConfigurationManager
-        from thonny.first_run import FirstRunWindow
-
-        mgr = ConfigurationManager(CONFIGURATION_FILE)
-
-        win = FirstRunWindow(mgr)
-        win.mainloop()
-        return win.ok
-    else:
+    if os.path.exists(CONFIGURATION_FILE) or misc_utils.running_on_rpi():
         return True
+
+    from thonny.config import ConfigurationManager
+    from thonny.first_run import FirstRunWindow
+
+    mgr = ConfigurationManager(CONFIGURATION_FILE)
+
+    win = FirstRunWindow(mgr)
+    win.mainloop()
+    return win.ok
 
 
 def launch():

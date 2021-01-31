@@ -79,9 +79,7 @@ class OutlineView(ttk.Frame):
         root_node = (None, 0, [], None, None, None)  # name, type and linenumber not needed for root
         active_node = root_node
 
-        lineno = 0
-        for line in source.split("\n"):
-            lineno += 1
+        for lineno, line in enumerate(source.split("\n"), start=1):
             m = re.match(r"[ ]*[\w]{1}", line)
             if m:
                 indent = len(m.group(0))

@@ -88,10 +88,7 @@ class AstView(ui_utils.TreeFrame):
 
             elif isinstance(node, list):
                 fields = list(enumerate(node))
-                if len(node) == 0:
-                    value_label = "[]"
-                else:
-                    value_label = "[...]"
+                value_label = "[]" if len(node) == 0 else "[...]"
             else:
                 fields = []
                 value_label = repr(node)

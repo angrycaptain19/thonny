@@ -25,11 +25,7 @@ def update_editor_cells(event):
     cells = []
     prev_marker = 0
     for match in cell_regex.finditer(source):
-        if match.start() == 0:
-            this_marker = match.start()
-        else:
-            this_marker = match.start() + 1
-
+        this_marker = match.start() if match.start() == 0 else match.start() + 1
         cell_start_index = text.index("1.0+%dc" % prev_marker)
         header_end_index = text.index("1.0+%dc" % match.end())
         cell_end_index = text.index("1.0+%dc" % this_marker)
@@ -83,21 +79,22 @@ def _patch_perform_return():
         text = event.widget
         ranges = text.tag_ranges("CURRENT_CELL")
 
-        if len(ranges) == 2 and (
-            ui_utils.shift_is_pressed(event.state) or ui_utils.control_is_pressed(event.state)
+        if (
+            len(ranges) != 2
+            or not ui_utils.shift_is_pressed(event.state)
+            and not ui_utils.control_is_pressed(event.state)
         ):
-
-            if run_enabled():
-                code = text.get(ranges[0], ranges[1]).strip()
-                _submit_code(code)
-
-                if ui_utils.shift_is_pressed(event.state):
-                    # advance to next cell
-                    text.mark_set("insert", ranges[1])
-
-            return "break"
-        else:
             return original_perform_return(self, event)
+
+        if run_enabled():
+            code = text.get(ranges[0], ranges[1]).strip()
+            _submit_code(code)
+
+            if ui_utils.shift_is_pressed(event.state):
+                # advance to next cell
+                text.mark_set("insert", ranges[1])
+
+        return "break"
 
     CodeViewText.perform_return = _patched_perform_return
 

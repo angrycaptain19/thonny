@@ -114,10 +114,9 @@ class VariablesHighlighter(BaseNameHighlighter):
         if isinstance(scope, tree.Function):
             if scope.children[1] == name:
                 return scope.children[1]  # 0th child is keyword "def", 1st is name
-            else:
-                definition = self._get_def_from_function_params(scope, name)
-                if definition:
-                    return definition
+            definition = self._get_def_from_function_params(scope, name)
+            if definition:
+                return definition
 
         for c in scope.children:
             if (
@@ -280,13 +279,10 @@ class VariablesHighlighter(BaseNameHighlighter):
             return set()
 
         # format usage positions as tkinter text widget indices
-        return set(
-            (
+        return {(
                 "%d.%d" % (usage.start_pos[0], usage.start_pos[1]),
                 "%d.%d" % (usage.start_pos[0], usage.start_pos[1] + len(name.value)),
-            )
-            for usage in self._find_usages(name, stmt)
-        )
+            ) for usage in self._find_usages(name, stmt)}
 
 
 class UsagesHighlighter(BaseNameHighlighter):
@@ -307,7 +303,7 @@ class UsagesHighlighter(BaseNameHighlighter):
         script = Script(source + ")")
         usages = script.get_references(line, column, include_builtins=False)
 
-        result = {
+        return {
             (
                 "%d.%d" % (usage.line, usage.column),
                 "%d.%d" % (usage.line, usage.column + len(usage.name)),
@@ -315,8 +311,6 @@ class UsagesHighlighter(BaseNameHighlighter):
             for usage in usages
             if usage.module_name == ""
         }
-
-        return result
 
 
 class CombinedHighlighter(VariablesHighlighter, UsagesHighlighter):

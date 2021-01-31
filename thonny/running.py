@@ -379,12 +379,12 @@ class Runner:
             )
 
     def _get_active_arguments(self):
-        if get_workbench().get_option("view.show_program_arguments"):
-            args_str = get_workbench().get_option("run.program_arguments")
-            get_workbench().log_program_arguments_string(args_str)
-            return shlex.split(args_str)
-        else:
+        if not get_workbench().get_option("view.show_program_arguments"):
             return []
+
+        args_str = get_workbench().get_option("run.program_arguments")
+        get_workbench().log_program_arguments_string(args_str)
+        return shlex.split(args_str)
 
     def cmd_run_current_script_enabled(self) -> bool:
         return (
@@ -634,39 +634,40 @@ class Runner:
         return self._proxy
 
     def _check_alloc_console(self) -> None:
-        if sys.executable.endswith("pythonw.exe"):
-            # These don't have console allocated.
-            # Console is required for sending interrupts.
+        if not sys.executable.endswith("pythonw.exe"):
+            return
+        # These don't have console allocated.
+        # Console is required for sending interrupts.
 
-            # AllocConsole would be easier but flashes console window
+        # AllocConsole would be easier but flashes console window
 
-            import ctypes
+        import ctypes
 
-            kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 
-            exe = sys.executable.replace("pythonw.exe", "python.exe")
+        exe = sys.executable.replace("pythonw.exe", "python.exe")
 
-            cmd = [exe, "-c", "print('Hi!'); input()"]
-            child = subprocess.Popen(
-                cmd,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                shell=True,
-            )
-            child.stdout.readline()
-            result = kernel32.AttachConsole(child.pid)
-            if not result:
-                err = ctypes.get_last_error()
-                logging.info("Could not allocate console. Error code: " + str(err))
-            child.stdin.write(b"\n")
-            try:
-                child.stdin.flush()
-            except Exception:
-                # May happen eg. when installation path has "&" in it
-                # See https://bitbucket.org/plas/thonny/issues/508/cant-allocate-windows-console-when
-                # Without flush the console window becomes visible, but Thonny can be still used
-                logger.exception("Problem with finalizing console allocation")
+        cmd = [exe, "-c", "print('Hi!'); input()"]
+        child = subprocess.Popen(
+            cmd,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=True,
+        )
+        child.stdout.readline()
+        result = kernel32.AttachConsole(child.pid)
+        if not result:
+            err = ctypes.get_last_error()
+            logging.info("Could not allocate console. Error code: " + str(err))
+        child.stdin.write(b"\n")
+        try:
+            child.stdin.flush()
+        except Exception:
+            # May happen eg. when installation path has "&" in it
+            # See https://bitbucket.org/plas/thonny/issues/508/cant-allocate-windows-console-when
+            # Without flush the console window becomes visible, but Thonny can be still used
+            logger.exception("Problem with finalizing console allocation")
 
     def ready_for_remote_file_operations(self, show_message=False):
         if not self._proxy or not self.supports_remote_files():
@@ -1125,40 +1126,41 @@ class SubprocessProxy(BackendProxy):
 
         msg = self._response_queue.popleft()
         self._store_state_info(msg)
-        if msg.event_type == "ProgramOutput":
-            # combine available small output messages to one single message,
-            # in order to put less pressure on UI code
-
-            wait_time = 0.01
-            total_wait_time = 0
-            while True:
-                if len(self._response_queue) == 0:
-                    if _ends_with_incomplete_ansi_code(msg["data"]) and total_wait_time < 0.1:
-                        # Allow reader to send the remaining part
-                        sleep(wait_time)
-                        total_wait_time += wait_time
-                        continue
-                    else:
-                        return msg
-                else:
-                    next_msg = self._response_queue.popleft()
-                    if (
-                        next_msg.event_type == "ProgramOutput"
-                        and next_msg["stream_name"] == msg["stream_name"]
-                        and (
-                            len(msg["data"]) + len(next_msg["data"]) <= OUTPUT_MERGE_THRESHOLD
-                            and ("\n" not in msg["data"] or not io_animation_required)
-                            or _ends_with_incomplete_ansi_code(msg["data"])
-                        )
-                    ):
-                        msg["data"] += next_msg["data"]
-                    else:
-                        # not to be sent in the same block, put it back
-                        self._response_queue.appendleft(next_msg)
-                        return msg
-
-        else:
+        if msg.event_type != "ProgramOutput":
             return msg
+
+        # combine available small output messages to one single message,
+        # in order to put less pressure on UI code
+
+        wait_time = 0.01
+        total_wait_time = 0
+        while True:
+            if len(self._response_queue) == 0:
+                if (
+                    not _ends_with_incomplete_ansi_code(msg["data"])
+                    or total_wait_time >= 0.1
+                ):
+                    return msg
+                # Allow reader to send the remaining part
+                sleep(wait_time)
+                total_wait_time += wait_time
+                continue
+            else:
+                next_msg = self._response_queue.popleft()
+                if (
+                    next_msg.event_type == "ProgramOutput"
+                    and next_msg["stream_name"] == msg["stream_name"]
+                    and (
+                        len(msg["data"]) + len(next_msg["data"]) <= OUTPUT_MERGE_THRESHOLD
+                        and ("\n" not in msg["data"] or not io_animation_required)
+                        or _ends_with_incomplete_ansi_code(msg["data"])
+                    )
+                ):
+                    msg["data"] += next_msg["data"]
+                else:
+                    # not to be sent in the same block, put it back
+                    self._response_queue.appendleft(next_msg)
+                    return msg
 
 
 def _ends_with_incomplete_ansi_code(data):
@@ -1404,27 +1406,29 @@ class InlineCommandDialog(WorkDialog):
         return self._instructions or self._cmd.get("description", "Working...")
 
     def _on_response(self, response):
-        if response.get("command_id") == getattr(self._cmd, "id"):
-            logger.debug("Dialog got response: %s", response)
-            self.response = response
-            self.returncode = response.get("returncode", None)
-            success = (
-                not self.returncode and not response.get("error") and not response.get("errors")
-            )
-            if success:
-                self.set_action_text("Done!")
-            else:
-                self.set_action_text("Error")
-                if response.get("error"):
-                    self.append_text("Error %s\n" % response["error"], stream_name="stderr")
-                if response.get("errors"):
-                    self.append_text("Errors %s\n" % response["errors"], stream_name="stderr")
-                if self.returncode:
-                    self.append_text(
-                        "Process returned with code %s\n" % self.returncode, stream_name="stderr"
-                    )
+        if response.get("command_id") != getattr(self._cmd, "id"):
+            return
 
-            self.report_done(success)
+        logger.debug("Dialog got response: %s", response)
+        self.response = response
+        self.returncode = response.get("returncode", None)
+        success = (
+            not self.returncode and not response.get("error") and not response.get("errors")
+        )
+        if success:
+            self.set_action_text("Done!")
+        else:
+            self.set_action_text("Error")
+            if response.get("error"):
+                self.append_text("Error %s\n" % response["error"], stream_name="stderr")
+            if response.get("errors"):
+                self.append_text("Errors %s\n" % response["errors"], stream_name="stderr")
+            if self.returncode:
+                self.append_text(
+                    "Process returned with code %s\n" % self.returncode, stream_name="stderr"
+                )
+
+        self.report_done(success)
 
     def _on_progress(self, msg):
         if msg.get("command_id") != getattr(self._cmd, "id"):

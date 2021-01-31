@@ -141,16 +141,11 @@ class BaseBackend(ABC):
                 response["command_name"] = command["name"]
             return response
         else:
-            if isinstance(response, dict):
-                args = response
-            else:
-                args = {}
-
+            args = response if isinstance(response, dict) else {}
             if isinstance(command, ToplevelCommand):
                 return ToplevelResponse(command_name=command.name, **args)
-            else:
-                assert isinstance(command, InlineCommand)
-                return InlineResponse(command_name=command.name, **args)
+            assert isinstance(command, InlineCommand)
+            return InlineResponse(command_name=command.name, **args)
 
     def send_message(self, msg: MessageFromBackend) -> None:
         sys.stdout.write(serialize_message(msg) + "\n")
@@ -631,17 +626,14 @@ def _longest_common_path_prefix(str_paths, path_class):
     if len(str_paths) == 1:
         return str_paths[0]
 
-    list_of_parts = []
-    for str_path in str_paths:
-        list_of_parts.append(path_class(str_path).parts)
-
+    list_of_parts = [path_class(str_path).parts for str_path in str_paths]
     first = list_of_parts[0]
     rest = list_of_parts[1:]
 
     i = 0
     while i < len(first):
         item_i = first[i]
-        if not all([len(x) > i and x[i] == item_i for x in rest]):
+        if not all(len(x) > i and x[i] == item_i for x in rest):
             break
         else:
             i += 1

@@ -119,9 +119,13 @@ class GeneralConfigurationPage(ConfigurationPage):
         )
         get_workbench().update_debug_mode()
 
-        env = []
-        for entry in self.env_box.text.get("1.0", "end").strip("\r\n").splitlines():
-            env.append(entry.strip("\r\n"))
+        env = [
+            entry.strip("\r\n")
+            for entry in self.env_box.text.get("1.0", "end")
+            .strip("\r\n")
+            .splitlines()
+        ]
+
         get_workbench().set_option("general.environment", env)
 
 

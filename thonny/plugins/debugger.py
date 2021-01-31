@@ -180,9 +180,11 @@ class SingleWindowDebugger(Debugger):
         self._last_progress_message = msg
         self.bring_out_frame(self._last_progress_message.stack[-1].id, force=True)
 
-        if get_workbench().get_option("debugger.automatic_stack_view"):
-            if len(msg.stack) > 1:
-                get_workbench().show_view("StackView")
+        if (
+            get_workbench().get_option("debugger.automatic_stack_view")
+            and len(msg.stack) > 1
+        ):
+            get_workbench().show_view("StackView")
 
         get_workbench().get_view("ExceptionView").set_exception(
             msg["exception_info"]["lines_with_frame_info"]
@@ -312,12 +314,10 @@ class StackedWindowsDebugger(Debugger):
         topmost_text_widget = visualizer._text
         focused_widget = get_workbench().focus_get()
 
-        if focused_widget is None:
+        if focused_widget is None or focused_widget != topmost_text_widget:
             return None
-        elif focused_widget == topmost_text_widget:
-            return visualizer
         else:
-            return None
+            return visualizer
 
     def bring_out_frame(self, frame_id, force=False):
         if not force and frame_id == self._last_brought_out_frame_id:
@@ -544,15 +544,14 @@ class FrameVisualizer:
     def _create_next_frame_visualizer(self, next_frame_info):
         if next_frame_info.code_name == "<module>":
             return ModuleLoadDialog(self._text, next_frame_info)
+        dialog = FunctionCallDialog(self._text.master, next_frame_info)
+
+        if self._expression_box.winfo_ismapped():
+            dialog.title(self._expression_box.get_focused_text())
         else:
-            dialog = FunctionCallDialog(self._text.master, next_frame_info)
+            dialog.title(tr("Function call at %s") % hex(self._frame_id))
 
-            if self._expression_box.winfo_ismapped():
-                dialog.title(self._expression_box.get_focused_text())
-            else:
-                dialog.title(tr("Function call at %s") % hex(self._frame_id))
-
-            return dialog
+        return dialog
 
     def bring_out_frame(self, frame_id):
         if self._frame_id == frame_id:
@@ -1069,11 +1068,10 @@ class StackView(ui_utils.TreeFrame):
 
     def on_select(self, event):
         iid = self.tree.focus()
-        if iid != "":
+        if iid != "" and _current_debugger is not None:
             # assuming id is in the last column
             frame_id = self.tree.item(iid)["values"][-1]
-            if _current_debugger is not None:
-                _current_debugger.bring_out_frame(frame_id)
+            _current_debugger.bring_out_frame(frame_id)
 
 
 class ExceptionView(TextFrame):

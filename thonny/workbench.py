@@ -864,10 +864,7 @@ class Workbench(tk.Tk):
             self._backend_conf_variable.set(value=repr(proxy.get_current_switcher_configuration()))
         else:
             backend_conf = self._backends.get(self.get_option("run.backend_name"), None)
-            if backend_conf:
-                desc = backend_conf.description
-            else:
-                desc = "<no backend>"
+            desc = backend_conf.description if backend_conf else "<no backend>"
         self._backend_button.configure(text=desc)
 
     def _init_theming(self) -> None:
@@ -1313,14 +1310,13 @@ class Workbench(tk.Tk):
 
             if parent is None:
                 return settings
-            else:
-                result = get_settings(parent)
-                for key in settings:
-                    if key in result:
-                        result[key].update(settings[key])
-                    else:
-                        result[key] = settings[key]
-                return result
+            result = get_settings(parent)
+            for key in settings:
+                if key in result:
+                    result[key].update(settings[key])
+                else:
+                    result[key] = settings[key]
+            return result
 
         from thonny import codeview
 
@@ -1521,14 +1517,10 @@ class Workbench(tk.Tk):
             label = tr("Device")
 
         if name not in self._menus:
-            if running_on_mac_os():
-                conf = {}
-            else:
-                conf = get_style_configuration("Menu")
-
+            conf = {} if running_on_mac_os() else get_style_configuration("Menu")
             menu = tk.Menu(self._menubar, **conf)
             menu["postcommand"] = lambda: self._update_menu(menu, name)
-            self._menubar.add_cascade(label=label if label else name, menu=menu)
+            self._menubar.add_cascade(label=label or name, menu=menu)
 
             self._menus[name] = menu
             if label:
@@ -2191,13 +2183,13 @@ class Workbench(tk.Tk):
 
         menu = self.get_menu(menu_name)
 
-        if menu.index("end") == None:  # menu is empty
+        if menu.index("end") is None:  # menu is empty
             return "end"
 
         specs = self._menu_item_specs[(menu_name, command_label)]
 
         this_group_exists = False
-        for i in range(0, menu.index("end") + 1):
+        for i in range(menu.index("end") + 1):
             data = menu.entryconfigure(i)
             if "label" in data:
                 # it's a command, not separator
@@ -2278,10 +2270,9 @@ class Workbench(tk.Tk):
             self.event_generate("WindowFocusIn")
 
     def _on_focus_out(self, event):
-        if self.focus_get() is None:
-            if not self._lost_focus:
-                self._lost_focus = True
-                self.event_generate("WindowFocusOut")
+        if self.focus_get() is None and not self._lost_focus:
+            self._lost_focus = True
+            self.event_generate("WindowFocusOut")
 
     def focus_get(self) -> Optional[tk.Widget]:
         try:
@@ -2350,11 +2341,7 @@ class Workbench(tk.Tk):
         if tk._default_root and not self._closing:  # type: ignore
             (typ, value, _) = sys.exc_info()
             assert typ is not None
-            if issubclass(typ, UserError):
-                msg = str(value)
-            else:
-                msg = traceback.format_exc()
-
+            msg = str(value) if issubclass(typ, UserError) else traceback.format_exc()
             dlg = ui_utils.LongTextDialog(title, msg, parent=self)
             ui_utils.show_dialog(dlg, self)
 
@@ -2412,10 +2399,7 @@ class Workbench(tk.Tk):
 
     def update_title(self, event=None) -> None:
         editor = self.get_editor_notebook().get_current_editor()
-        if self._is_portable:
-            title_text = "Portable Thonny"
-        else:
-            title_text = "Thonny"
+        title_text = "Portable Thonny" if self._is_portable else "Thonny"
         if editor != None:
             title_text += "  -  " + editor.get_long_description()
 
@@ -2468,11 +2452,7 @@ class Workbench(tk.Tk):
         if url.endswith(".rst") and not url.startswith("http"):
             parts = url.split("#", maxsplit=1)
             topic = parts[0][:-4]
-            if len(parts) == 2:
-                fragment = parts[1]
-            else:
-                fragment = None
-
+            fragment = parts[1] if len(parts) == 2 else None
             self.show_view("HelpView").load_topic(topic, fragment)
             return
 

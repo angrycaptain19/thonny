@@ -144,7 +144,7 @@ class FindDialog(CommonDialog):
         self.replace_all_button.grid(
             column=3, row=3, sticky=tk.W + tk.E, padx=(0, padx), pady=(0, pady)
         )
-        if FindDialog.last_searched_word == None:
+        if FindDialog.last_searched_word is None:
             self.replace_all_button.config(state="disabled")
 
         # create bindings
@@ -193,7 +193,7 @@ class FindDialog(CommonDialog):
     def _perform_replace(self):
 
         # nothing is currently in found status
-        if self.active_found_tag == None:
+        if self.active_found_tag is None:
             return
 
         # get the found word bounds
@@ -223,7 +223,7 @@ class FindDialog(CommonDialog):
 
     # performs the replace operation followed by a new find
     def _perform_replace_and_find(self):
-        if self.active_found_tag == None:
+        if self.active_found_tag is None:
             return
         self._perform_replace()
         self._perform_find()

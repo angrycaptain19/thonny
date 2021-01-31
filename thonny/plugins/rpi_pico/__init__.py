@@ -73,10 +73,10 @@ class PicoFlashingDialog(Uf2FlashingDialog):
         return "https://api.github.com/repos/raspberrypi/micropython/releases/latest"
 
     def _is_suitable_asset(self, asset, model_id):
-        if not asset["name"].endswith(".uf2") or "micropython" not in asset["name"].lower():
-            return False
-
-        return True
+        return bool(
+            asset["name"].endswith(".uf2")
+            and "micropython" in asset["name"].lower()
+        )
 
     @classmethod
     def _is_relevant_board_id(cls, board_id):

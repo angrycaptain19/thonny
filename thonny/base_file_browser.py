@@ -306,8 +306,7 @@ class BaseFileBrowser(ttk.Frame):
             return None
 
     def get_active_directory(self):
-        path = self.tree.set(ROOT_NODE_ID, "path")
-        return path
+        return self.tree.set(ROOT_NODE_ID, "path")
 
     def request_dirs_child_data(self, node_id, paths):
         raise NotImplementedError()
@@ -883,18 +882,18 @@ class BaseLocalFileBrowser(BaseFileBrowser):
 
     def split_path(self, path):
         parts = super().split_path(path)
-        if running_on_windows() and path.startswith("\\\\"):
-            # Don't split a network name!
-            sep = self.get_dir_separator()
-            for i in reversed(range(len(parts))):
-                prefix = sep.join(parts[: i + 1])
-                if os.path.ismount(prefix):
-                    return [prefix] + parts[i + 1 :]
-
-            # Could not find the prefix corresponding to mount
-            return [path]
-        else:
+        if not running_on_windows() or not path.startswith("\\\\"):
             return parts
+
+        # Don't split a network name!
+        sep = self.get_dir_separator()
+        for i in reversed(range(len(parts))):
+            prefix = sep.join(parts[: i + 1])
+            if os.path.ismount(prefix):
+                return [prefix] + parts[i + 1 :]
+
+        # Could not find the prefix corresponding to mount
+        return [path]
 
     def open_file(self, path):
         get_workbench().get_editor_notebook().show_file(path)

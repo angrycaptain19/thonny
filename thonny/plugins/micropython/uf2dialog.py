@@ -69,11 +69,14 @@ class Uf2FlashingDialog(WorkDialog):
         # Resize progress bar to align with this grid
         default_font = tkfont.nametofont("TkDefaultFont")
         max_caption_len = max(
-            [
-                default_font.measure(caption + ":")
-                for caption in [latest_ver_caption, device_location_caption, device_model_caption]
+            default_font.measure(caption + ":")
+            for caption in [
+                latest_ver_caption,
+                device_location_caption,
+                device_model_caption,
             ]
         )
+
         self._progress_bar["length"] = max_caption_len
 
     def get_info_text_width(self):
@@ -189,7 +192,7 @@ class Uf2FlashingDialog(WorkDialog):
             for asset in self._release_info["assets"]
             if self._is_suitable_asset(asset, board_id)
         ]
-        if len(candidates) == 0:
+        if not candidates:
             raise RuntimeError(
                 "Could not find the right file from the release info (%s)"
                 % self._get_release_info_url()
@@ -345,15 +348,15 @@ class Uf2FlashingDialog(WorkDialog):
         )
 
         with urlopen(req, timeout=5) as fsrc:
-            bytes_copied = 0
             self.append_text("Writing to %s\n" % target_path)
             self.append_text("Starting...")
             if fsrc.length:
                 # override (possibly inaccurate) size
                 size = fsrc.length
 
-            block_size = 8 * 1024
             with open(target_path, "wb") as fdst:
+                bytes_copied = 0
+                block_size = 8 * 1024
                 while True:
 
                     block = fsrc.read(block_size)

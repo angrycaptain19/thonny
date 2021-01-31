@@ -63,8 +63,7 @@ def get_last_child(node, skip_incorrect=True):
                     else:
                         return None
                 else:
-                    return nodes[i]
-
+                    return node
         return None
 
     if isinstance(node, ast.Call):

@@ -88,11 +88,7 @@ class FilesView(tk.PanedWindow):
     def restore_split(self):
         split = get_workbench().get_option("view.files_split", None)
         if split is None:
-            if self.winfo_height() > 5:
-                split = int(self.winfo_height() * 0.66)
-            else:
-                split = 600
-
+            split = int(self.winfo_height() * 0.66) if self.winfo_height() > 5 else 600
         self.sash_place(0, 0, split)
 
     def on_backend_restart(self, event):
@@ -138,18 +134,18 @@ class ActiveLocalFileBrowser(BaseLocalFileBrowser):
     def get_proposed_new_file_name(self, folder, extension):
         base = "new_file"
 
-        if os.path.exists(os.path.join(folder, base + extension)):
-            i = 2
-
-            while True:
-                name = base + "_" + str(i) + extension
-                path = os.path.join(folder, name)
-                if os.path.exists(path):
-                    i += 1
-                else:
-                    return name
-        else:
+        if not os.path.exists(os.path.join(folder, base + extension)):
             return base + extension
+
+        i = 2
+
+        while True:
+            name = base + "_" + str(i) + extension
+            path = os.path.join(folder, name)
+            if os.path.exists(path):
+                i += 1
+            else:
+                return name
 
     def request_focus_into(self, path):
         if path == "":
@@ -533,11 +529,7 @@ def prepare_upload_items(
 
 
 def get_transfer_description(verb, paths, target_dir):
-    if len(paths) == 1:
-        subject = "'%s'" % paths[0]
-    else:
-        subject = "%d items" % len(paths)
-
+    subject = "'%s'" % paths[0] if len(paths) == 1 else "%d items" % len(paths)
     return "%s %s to %s" % (verb, subject, target_dir)
 
 

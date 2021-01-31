@@ -475,10 +475,7 @@ class PipDialog(CommonDialog):
         self.current_package_data = data
 
         def write(s, tag=None):
-            if tag is None:
-                tags = ()
-            else:
-                tags = (tag,)
+            tags = () if tag is None else (tag, )
             self._append_info_text(s, tags)
 
         def write_att(caption, value, value_tag=None):
@@ -801,12 +798,11 @@ class PipDialog(CommonDialog):
     def _read_only(self):
         if self._should_install_to_site_packages():
             return False
-        else:
-            # readonly if not in a virtual environment
-            # and user site packages is disabled
-            import site
+        # readonly if not in a virtual environment
+        # and user site packages is disabled
+        import site
 
-            return not site.ENABLE_USER_SITE
+        return not site.ENABLE_USER_SITE
 
     def _tweak_search_results(self, results, query):
         return results
@@ -886,13 +882,12 @@ class CPythonBackendPipDialog(BackendPipDialog):
     def _get_target_directory(self):
         if self._should_install_to_site_packages():
             return normpath_with_actual_case(self._backend_proxy.get_site_packages())
-        else:
-            usp = self._backend_proxy.get_user_site_packages()
-            if isinstance(self._backend_proxy, CPythonProxy):
-                os.makedirs(usp, exist_ok=True)
-                return normpath_with_actual_case(usp)
-            else:
-                return usp
+        usp = self._backend_proxy.get_user_site_packages()
+        if not isinstance(self._backend_proxy, CPythonProxy):
+            return usp
+
+        os.makedirs(usp, exist_ok=True)
+        return normpath_with_actual_case(usp)
 
     def _should_install_to_site_packages(self):
         return self._targets_virtual_environment()

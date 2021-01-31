@@ -12,10 +12,6 @@ def test_path_startswith():
 
     if os.name == "nt":
         assert path_startswith("/kala/pala", "/KALA")
-    else:
-        assert not path_startswith("/kala/pala", "/KALA")
-
-    if os.name == "nt":
         assert path_startswith("C:\\foo\\bar", "C:\\foo")
         assert path_startswith("C:\\foo", "C:\\")
         assert path_startswith("C:/foo", "C:\\")
@@ -31,3 +27,5 @@ def test_path_startswith():
         assert path_startswith("c:\\foo\\bar.txt/kala\\pala", "C:\\")
 
         assert not path_startswith("C:\\kalapala\\pala", "C:\\kala")
+    else:
+        assert not path_startswith("/kala/pala", "/KALA")

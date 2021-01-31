@@ -95,9 +95,8 @@ class MicrobitFlashingDialog(Uf2FlashingDialog):
     def _get_latest_firmware_info_for_current_device(self):
         if self._possible_targets is None or len(self._possible_targets) != 1:
             return None
-        else:
-            board_id = self._possible_targets[0][1]
-            return self._get_latest_firmware_info_for_device(board_id)
+        board_id = self._possible_targets[0][1]
+        return self._get_latest_firmware_info_for_device(board_id)
 
     def _get_latest_firmware_info_for_device(self, board_id):
         if self._release_info is None:
@@ -121,16 +120,16 @@ class MicrobitFlashingDialog(Uf2FlashingDialog):
         if not os.path.isfile(info_path):
             return None
 
-        # https://tech.microbit.org/latest-revision/editors/
-        models = {
-            "9900": "BBC micro:bit v1.3",
-            "9901": "BBC micro:bit v1.5",
-            "9903": "BBC micro:bit v2.0 (9903)",
-            "9904": "BBC micro:bit v2.0",
-        }
-
         with open(info_path, "r", encoding="UTF-8", errors="replace") as fp:
             id_marker = "Unique ID:"
+            # https://tech.microbit.org/latest-revision/editors/
+            models = {
+                "9900": "BBC micro:bit v1.3",
+                "9901": "BBC micro:bit v1.5",
+                "9903": "BBC micro:bit v2.0 (9903)",
+                "9904": "BBC micro:bit v2.0",
+            }
+
             for line in fp:
                 if line.startswith(id_marker):
                     board_id = line[len(id_marker) :].strip()[:4]

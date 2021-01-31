@@ -597,16 +597,16 @@ class MicroPythonBackend(MainBackend, ABC):
         return bool(self._cwd)
 
     def _cmd_cd(self, cmd):
-        if len(cmd.args) == 1:
-            if not self._supports_directories():
-                raise UserError("This device doesn't have directories")
-
-            path = cmd.args[0]
-            self._execute("__thonny_helper.chdir(%r)" % path)
-            self._update_cwd()
-            return {}
-        else:
+        if len(cmd.args) != 1:
             raise UserError("%cd takes one parameter")
+
+        if not self._supports_directories():
+            raise UserError("This device doesn't have directories")
+
+        path = cmd.args[0]
+        self._execute("__thonny_helper.chdir(%r)" % path)
+        self._update_cwd()
+        return {}
 
     def _cmd_Run(self, cmd):
         raise NotImplementedError()
@@ -646,9 +646,9 @@ class MicroPythonBackend(MainBackend, ABC):
                 )
             )
 
-        value_infos = {}
-        for name, pair in globs.items():
-            value_infos[name] = ValueInfo(pair[1], pair[0])
+        value_infos = {
+            name: ValueInfo(pair[1], pair[0]) for name, pair in globs.items()
+        }
 
         return {"module_name": cmd.module_name, "globals": value_infos}
 
@@ -912,11 +912,7 @@ class MicroPythonBackend(MainBackend, ABC):
     def _get_stat(
         self, path: str
     ) -> Optional[Tuple[int, int, int, int, int, int, int, int, int, int]]:
-        if not self._supports_directories():
-            func = "size"
-        else:
-            func = "stat"
-
+        func = "size" if not self._supports_directories() else "stat"
         stat = self._evaluate(
             dedent(
                 """
@@ -1028,14 +1024,15 @@ class MicroPythonBackend(MainBackend, ABC):
                 names = []
                 prefix = ""
 
-            completions = []
-
             # prevent TypeError (iterating over None)
-            names = names if names else []
+            names = names or []
 
-            for name in names:
-                if name.startswith(prefix) and not name.startswith("__"):
-                    completions.append({"name": name, "complete": name[len(prefix) :]})
+            completions = [
+                {"name": name, "complete": name[len(prefix) :]}
+                for name in names
+                if name.startswith(prefix) and not name.startswith("__")
+            ]
+
 
             return {"completions": completions, "source": source}
 
@@ -1216,11 +1213,7 @@ class MicroPythonBackend(MainBackend, ABC):
 
             mark_text_ranges(root, source)
 
-            expr_stmts = []
-            for node in ast.walk(root):
-                if isinstance(node, ast.Expr):
-                    expr_stmts.append(node)
-
+            expr_stmts = [node for node in ast.walk(root) if isinstance(node, ast.Expr)]
             marker_prefix = "__thonny_helper.print_repl_value("
             marker_suffix = ")"
 
@@ -1257,11 +1250,7 @@ class MicroPythonBackend(MainBackend, ABC):
 
             mark_text_ranges(root, source)
 
-            expr_stmts = []
-            for node in ast.walk(root):
-                if isinstance(node, ast.Expr):
-                    expr_stmts.append(node)
-
+            expr_stmts = [node for node in ast.walk(root) if isinstance(node, ast.Expr)]
             marker_prefix = ""
             marker_suffix = " and None or None"
 

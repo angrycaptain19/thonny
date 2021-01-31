@@ -248,16 +248,8 @@ def update_fonts():
                             family = result.group(1)
                             options["size"] = int(result.group(2))
 
-                            if re.search(r"\bBold\b", family):
-                                options["weight"] = "bold"
-                            else:
-                                options["weight"] = "normal"
-
-                            if re.search(r"\bItalic\b", family):
-                                options["slant"] = "italic"
-                            else:
-                                options["slant"] = "roman"
-
+                            options["weight"] = "bold" if re.search(r"\bBold\b", family) else "normal"
+                            options["slant"] = "italic" if re.search(r"\bItalic\b", family) else "roman"
                             options["family"] = family.replace(" Bold", "").replace(" Italic", "")
             except Exception as e:
                 logger.error("Could not update fonts", exc_info=e)
@@ -308,9 +300,9 @@ def load_plugin():
         }
 
     res_dir = os.path.join(os.path.dirname(__file__), "res")
-    theme_image_map = {}
-    for image in images:
-        theme_image_map[image] = os.path.join(res_dir, images[image])
+    theme_image_map = {
+        image: os.path.join(res_dir, images[image]) for image in images
+    }
 
     get_workbench().add_ui_theme("Raspberry Pi", "Enhanced Clam", pix, theme_image_map)
     get_workbench().add_ui_theme("Raspberry Pi Dark", "Clean Dark", pix_dark, theme_image_map)

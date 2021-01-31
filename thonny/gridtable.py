@@ -58,11 +58,7 @@ class GridTable(tk.Frame):
         return self.header_widgets[(row_no, col_no)]
 
     def create_data_widget(self, col_no):
-        if col_no < self.frozen_column_count:
-            background = None
-        else:
-            background = "white"
-
+        background = None if col_no < self.frozen_column_count else "white"
         return tk.Label(self, background=background, anchor="e", padx=7, text="")
 
     def create_header_widget(self, col_no):

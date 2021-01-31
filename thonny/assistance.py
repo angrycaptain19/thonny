@@ -282,22 +282,25 @@ class AssistantView(tktextext.TextFrame):
 
     def _present_conclusion(self):
 
-        if not self.text.get("1.0", "end").strip():
-            if self.main_file_path is not None and os.path.exists(self.main_file_path):
-                self._append_text("\n")
-                self.text.append_rst(
-                    "The code in `%s <%s>`__ looks good.\n\n"
-                    % (
-                        os.path.basename(self.main_file_path),
-                        self._format_file_url({"filename": self.main_file_path}),
-                    )
+        if (
+            not self.text.get("1.0", "end").strip()
+            and self.main_file_path is not None
+            and os.path.exists(self.main_file_path)
+        ):
+            self._append_text("\n")
+            self.text.append_rst(
+                "The code in `%s <%s>`__ looks good.\n\n"
+                % (
+                    os.path.basename(self.main_file_path),
+                    self._format_file_url({"filename": self.main_file_path}),
                 )
-                self.text.append_rst(
-                    "If it is not working as it should, "
-                    + "then consider using some general "
-                    + "`debugging techniques <debugging.rst>`__.\n\n",
-                    ("em",),
-                )
+            )
+            self.text.append_rst(
+                "If it is not working as it should, "
+                + "then consider using some general "
+                + "`debugging techniques <debugging.rst>`__.\n\n",
+                ("em",),
+            )
 
         if self.text.get("1.0", "end").strip():
             self._append_feedback_link()
